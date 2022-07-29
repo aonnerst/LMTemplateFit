@@ -32,6 +32,7 @@ for( int iF=0; iF<=F_trials; iF++){
 	}
 //Member functions
 void LoadData(TString inputfile);
+void GetChi2(TH1D *h,TF1 *fFit);
 
 
 //Main function that calculates the fit
@@ -72,11 +73,22 @@ void Template(){
 		//Fitting Y'
 		hYPrime[iF]->Fit("fFit");
 		fFitarray[iF]=fFit;
+		//Chi square test
+		chiarray[iF]=GetChi2(hYPrime[iF],fFitarray[iF]);
 	}
 	
-	//chi^2
+	//finding smallest chi^2
+	double minChi = chiarray[0];
+	int index_minChi = 0;
+	for(int iF=0; iF<=F_trials; iF++){
+		if(chiarray[iF]<minChi){
+			minChi=chiarray[iF];
+			index_minChi=iF;
+		}
+	}
 
-	//find best F parameters
+	//find best F parameters, being Farray[index_minChi]
+	double bestF = Farray[index_minChi];
 
 
 }
@@ -86,4 +98,24 @@ void LoadData(TString inputfilename){
 
 	hDeltaPhiHM = (TH1D*)fIn->Get("hDeltaPhiHM");
 	hDeltaPhiLM = (TH1D*)fIn->Get("hDeltaPhiLM"); 	
+}
+
+void GetChi2(TH1D *h,TF1 *fFit){
+	double nBins = h->GetNbinsX();
+	double chi2 = 0;
+	for(int ib=1;ib<=nBins;ib++){
+		double y_i = h->GetBinContent(ib);
+		double x = h->GetBinCenter(ib);
+		double f_i = fFit->Eval(x);
+		double sigma_y = h->GetBinError(ib);
+		double sigma_f = fFit->GetParErrors();
+
+		double diff2 = TMath::Pow(y_i-f_i,2);
+		double error_tot = TMath::Pow(sigma_y,2)+TMath::Pow(sigma_f,2);
+
+		chi2 += chi2 + (diff2/error_tot);
+
+	}
+
+	return chi2;
 }
